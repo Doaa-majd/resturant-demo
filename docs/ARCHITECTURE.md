@@ -39,6 +39,19 @@ Validate missing/duplicate IDs, invalid references, unsupported currency precisi
 
 Switch via one active configuration key and refresh cached configuration using verified tooling. One deployment selects one restaurant; no public tenant URL/switcher is needed. Resolve the profile server-side, never from a trusted browser-submitted profile object. Scope sessions by stable restaurant key.
 
+### Phase 1 configuration contract
+`config/restaurants.php` now owns the two profiles. `RestaurantProfileResolver` receives Laravel's configuration repository and `RestaurantProfileValidator` through constructor injection; `resolve()` validates and returns only the selected profile, with no fallback or merge. The resolver is container-autowired and reads selection on each call. Invalid configuration throws a field-only `InvalidArgumentException`, without echoing contact values.
+
+Categories, items, branches, and section item references are ordered lists. IDs are unique within each list; items refer to category IDs and bestseller/offer sections refer to item IDs. Bundle contents and serving text live only on the ordinary fixed-price item. Empty catalogs/categories and empty reference lists are valid browsing states; the supplied demos include all sections. Hours use English weekday keys and lists of `{start, end}` local times. Validation rejects overlaps, including across Sunday/Monday, but accepts adjoining intervals and entirely closed weeks. Runtime hours evaluation remains Phase 3.
+
+Assets use `{path, alt, plan, attribution}`. A null path explicitly means an asset has not been acquired; the plan and Arabic description remain required. A populated path must be under `images/restaurants/{slug}/` with a supported image extension and a nonempty attribution reference. This validates configuration syntax, not file existence or legal rights. Before rendering actual assets, acquire and verify files, dimensions, licenses and responsive variants; implement the designed fallback in the UI phases. Theme configuration allows only the documented eleven six-digit hex colors and the approved font tokens. Contrast/font availability still require visual verification.
+
+Per the user's Phase 1 clarification, contact numbers are environment-backed per restaurant, never literals in the profile. Use `DAR_AL_SUFRA_WHATSAPP_NUMBER` / `SAJ_WA_ZAYTOUN_WHATSAPP_NUMBER` in the local ignored `.env`, with international digits only (8–15 digits, nonzero first digit). Corresponding `_PHONE_NUMBER` variables supply informational contact/branch phones. Set absent numbers to `null` as shown in `.env.example`; do not insert arbitrary reachable numbers. Syntax validation does not prove ownership or WhatsApp registration.
+
+Both demos default to `contacts.ordering_enabled = false`, controlled by `DAR_AL_SUFRA_ORDERING_ENABLED` / `SAJ_WA_ZAYTOUN_ORDERING_ENABLED`. Explicitly unconfigured contacts are valid for browsing; enabling ordering requires a valid recipient. Phase 6 must use the selected profile's `contacts.whatsapp` and require `ordering_enabled` in addition to cart/hours/review eligibility. This is an explicit safe-demo exception to the initial mandatory-recipient plan, not a functioning checkout in Phase 1. Phone links must be omitted when their configured value is null. Map links currently identify the demonstration city, not a fictional business location.
+
+Set `RESTAURANT_PROFILE=dar-al-sufra` or `RESTAURANT_PROFILE=saj-wa-zaytoun` in local `.env` to switch. After changes, use `php artisan config:clear` for uncached local development or `php artisan config:cache` to rebuild a cache once compatible PHP is available. These Artisan commands are currently blocked by the runtime; profile export/reload alone is not proof of Laravel cache bootstrap. Do not commit `.env` or generated config caches containing contact values.
+
 ## Responsibilities and data flow
 | Responsibility | Boundary |
 | --- | --- |
